@@ -1,11 +1,21 @@
 package com.xidian.resource.controller;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.nio.charset.Charset;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 import net.sf.json.JSONObject;
 
@@ -25,11 +35,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.xidian.common.RsaHelper;
+
 @Controller
 public class ImageController {
 	private Logger logger = Logger.getLogger(getClass());
 
 	private String server_url = "http://localhost:8080/resource/upload/pic";
+
+	private String token = "v@#$%^v";
 
 	@RequestMapping(value = "/sample", method = { RequestMethod.POST })
 	@ResponseBody
@@ -64,8 +78,25 @@ public class ImageController {
 	@RequestMapping(value = "/upload/pic", method = { RequestMethod.POST })
 	@ResponseBody
 	public Object uploadPic(
-			@RequestParam(value = "file", required = false) MultipartFile file) {
+			@RequestParam(value = "file", required = true) MultipartFile file,
+			@RequestParam(value = "password", required = true) String password)
+			throws FileNotFoundException, IOException, ClassNotFoundException,
+			InvalidKeyException, NoSuchAlgorithmException,
+			NoSuchPaddingException, IllegalBlockSizeException,
+			BadPaddingException {
+		Map<String, Object> map = new HashMap<String, Object>();
 		logger.info("file:" + file.getName());
+		RsaHelper rsaHelper = new RsaHelper();
+		ObjectInputStream privateKeyOis = new ObjectInputStream(this.getClass()
+				.getResourceAsStream(
+						"/config/key/privatekey-1497962670186.keystore"));
+		Key privateKey = (Key) privateKeyOis.readObject();
+		privateKeyOis.close();
+		String target = rsaHelper.decrypt(password, privateKey);
+		if (!this.token.equals(target)) {
+			map.put("id", -1);
+			return map;
+		}
 		String id = UUID.randomUUID().toString();
 		File pic = new File(id);
 		try {
@@ -75,7 +106,7 @@ public class ImageController {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		Map<String, Object> map = new HashMap<String, Object>();
+
 		map.put("id", id);
 		return map;
 	}
