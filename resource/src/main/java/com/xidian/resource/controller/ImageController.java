@@ -1,7 +1,6 @@
 package com.xidian.resource.controller;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -28,6 +27,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -41,7 +41,8 @@ import com.xidian.common.RsaHelper;
 public class ImageController {
 	private Logger logger = Logger.getLogger(getClass());
 
-	private String server_url = "http://localhost:8080/resource/upload/pic";
+	@Value("#{config[server_url]}")
+	private String server_url = "";
 
 	private String token = "v@#$%^v";
 
