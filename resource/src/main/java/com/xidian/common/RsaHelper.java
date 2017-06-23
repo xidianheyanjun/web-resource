@@ -25,13 +25,13 @@ public class RsaHelper {
 	public RsaHelper() {
 	}
 
-	private long generateKeyPair() throws NoSuchAlgorithmException,
+	private static long generateKeyPair() throws NoSuchAlgorithmException,
 			NoSuchProviderException, FileNotFoundException, IOException {
 		KeyPairHelper keyPairHelper = new KeyPairHelper();
 		return keyPairHelper.generateKeyPair();
 	}
 
-	public String encrypt(String data, Key publicKey)
+	public static String encrypt(String data, Key publicKey)
 			throws NoSuchAlgorithmException, NoSuchPaddingException,
 			InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		Cipher cipher = Cipher.getInstance("RSA");
@@ -42,7 +42,7 @@ public class RsaHelper {
 		return HexHelper.bytes2Hex(encoder.encode(b1).getBytes());
 	}
 
-	public String decrypt(String cryptData, Key privateKey)
+	public static String decrypt(String cryptData, Key privateKey)
 			throws NoSuchAlgorithmException, NoSuchPaddingException,
 			InvalidKeyException, IOException, IllegalBlockSizeException,
 			BadPaddingException {
@@ -60,8 +60,7 @@ public class RsaHelper {
 			NoSuchAlgorithmException, NoSuchPaddingException,
 			IllegalBlockSizeException, BadPaddingException,
 			NoSuchProviderException {
-		RsaHelper rsaHelper = new RsaHelper();
-		long currentTime = rsaHelper.generateKeyPair();
+		long currentTime = RsaHelper.generateKeyPair();
 
 		String source = "v军军v";
 
@@ -77,12 +76,12 @@ public class RsaHelper {
 		Key privateKey = (Key) privateKeyOis.readObject();
 		privateKeyOis.close();
 
-		String cryptData = rsaHelper.encrypt(source, publicKey);
+		String cryptData = RsaHelper.encrypt(source, publicKey);
 		System.out.println("-----------密文-----------");
 		System.out.println(cryptData);
 		System.out.println();
 
-		String target = rsaHelper.decrypt(cryptData, privateKey);
+		String target = RsaHelper.decrypt(cryptData, privateKey);
 		System.out.println("-----------原文-----------");
 		System.out.println(target);
 	}

@@ -1,7 +1,6 @@
 package com.xidian.resource.controller;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.security.InvalidKeyException;
@@ -40,23 +39,60 @@ public class ImageController {
 	@Value("#{config[image_store_dir]}")
 	private String image_store_dir = "";
 
+	private Key privateKey = null;
+
 	@RequestMapping(value = "/upload/pic", method = { RequestMethod.POST })
 	@ResponseBody
 	public Object uploadPic(HttpServletRequest request,
 			@RequestParam(value = "file", required = true) MultipartFile file,
-			@RequestParam(value = "password", required = true) String password)
-			throws FileNotFoundException, IOException, ClassNotFoundException,
-			InvalidKeyException, NoSuchAlgorithmException,
-			NoSuchPaddingException, IllegalBlockSizeException,
-			BadPaddingException {
+			@RequestParam(value = "password", required = true) String password) {
 		Map<String, Object> map = new HashMap<String, Object>();
 		logger.info("file:" + file.getName());
-		RsaHelper rsaHelper = new RsaHelper();
-		ObjectInputStream privateKeyOis = new ObjectInputStream(this.getClass()
-				.getResourceAsStream(this.private_key_path));
-		Key privateKey = (Key) privateKeyOis.readObject();
-		privateKeyOis.close();
-		String target = rsaHelper.decrypt(password, privateKey);
+		if (this.privateKey == null) {
+			ObjectInputStream privateKeyOis;
+			try {
+				privateKeyOis = new ObjectInputStream(this.getClass()
+						.getResourceAsStream(this.private_key_path));
+				this.privateKey = (Key) privateKeyOis.readObject();
+				privateKeyOis.close();
+			} catch (IOException e) {
+				logger.error(e);
+				map.put("code", "read key io exception");
+				return map;
+			} catch (ClassNotFoundException e) {
+				logger.error(e);
+				map.put("code", "read key class not found exception");
+				return map;
+			}
+		}
+		String target = "";
+		try {
+			target = RsaHelper.decrypt(password, this.privateKey);
+		} catch (InvalidKeyException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt invalid key exception");
+			return map;
+		} catch (NoSuchAlgorithmException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt no such algorithm exception");
+			return map;
+		} catch (NoSuchPaddingException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt no such padding exception");
+			return map;
+		} catch (IllegalBlockSizeException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt illegal block size exception");
+			return map;
+		} catch (BadPaddingException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt bad padding exception");
+			return map;
+		} catch (IOException e1) {
+			logger.error(e1);
+			map.put("code", "decrypt io exception");
+			return map;
+		}
 		if (!this.upload_password.equals(target)) {
 			map.put("id", -1);
 			return map;
