@@ -8,10 +8,10 @@
 </head>
 <body>
 	<h2>Hello World!</h2>
-	<form action="/resource/sample" method="post"
+	<form action="/resource/upload/pic" method="post"
 		enctype="multipart/form-data">
-		<input type="file" id="file" name="file" /> <input type="submit"
-			value="提交" />
+		<input type="text" id="password" name="password" value="sdakjdhakdh" /> <input
+			type="file" id="file" name="file" /> <input type="submit" value="提交" />
 	</form>
 </body>
 </html>

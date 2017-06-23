@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.nio.charset.Charset;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
@@ -15,17 +14,8 @@ import java.util.UUID;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.servlet.http.HttpServletRequest;
 
-import net.sf.json.JSONObject;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
@@ -41,44 +31,18 @@ import com.xidian.common.RsaHelper;
 public class ImageController {
 	private Logger logger = Logger.getLogger(getClass());
 
-	@Value("#{config[server_url]}")
-	private String server_url = "";
+	@Value("#{config[upload_password]}")
+	private String upload_password = "";
 
-	private String token = "v@#$%^v";
+	@Value("#{config[private_key_path]}")
+	private String private_key_path = "";
 
-	@RequestMapping(value = "/sample", method = { RequestMethod.POST })
-	@ResponseBody
-	public Object sample(
-			@RequestParam(value = "file", required = false) MultipartFile file)
-			throws IOException {
-		logger.info("server_url:" + this.server_url);
-
-		CloseableHttpClient httpClient = HttpClients.createDefault();
-		HttpPost httpPost = new HttpPost(this.server_url);
-		MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-		builder.addBinaryBody("file", file.getInputStream(),
-				ContentType.MULTIPART_FORM_DATA, file.getOriginalFilename());// 文件流
-		builder.addTextBody("filename", file.getOriginalFilename());// 类似浏览器表单提交，对应input的name和value
-		HttpEntity entity = builder.build();
-		httpPost.setEntity(entity);
-		HttpResponse response = httpClient.execute(httpPost);// 执行提交
-		HttpEntity responseEntity = response.getEntity();
-		logger.info("responseEntity:" + responseEntity.toString());
-		// 将响应内容转换为字符串
-		String result = EntityUtils.toString(responseEntity,
-				Charset.forName("UTF-8"));
-		logger.info("result:" + result);
-		JSONObject jsonBean = JSONObject.fromObject(result);
-		httpClient.close();
-
-		Map<String, Object> map = new HashMap<String, Object>();
-		map.put("id", jsonBean.get("id"));
-		return map;
-	}
+	@Value("#{config[image_store_dir]}")
+	private String image_store_dir = "";
 
 	@RequestMapping(value = "/upload/pic", method = { RequestMethod.POST })
 	@ResponseBody
-	public Object uploadPic(
+	public Object uploadPic(HttpServletRequest request,
 			@RequestParam(value = "file", required = true) MultipartFile file,
 			@RequestParam(value = "password", required = true) String password)
 			throws FileNotFoundException, IOException, ClassNotFoundException,
@@ -89,17 +53,19 @@ public class ImageController {
 		logger.info("file:" + file.getName());
 		RsaHelper rsaHelper = new RsaHelper();
 		ObjectInputStream privateKeyOis = new ObjectInputStream(this.getClass()
-				.getResourceAsStream(
-						"/config/key/privatekey-1497962670186.keystore"));
+				.getResourceAsStream(this.private_key_path));
 		Key privateKey = (Key) privateKeyOis.readObject();
 		privateKeyOis.close();
 		String target = rsaHelper.decrypt(password, privateKey);
-		if (!this.token.equals(target)) {
+		if (!this.upload_password.equals(target)) {
 			map.put("id", -1);
 			return map;
 		}
-		String id = UUID.randomUUID().toString();
-		File pic = new File(id);
+		String id = UUID.randomUUID().toString().replaceAll("-", "");
+		String path = request.getSession().getServletContext()
+				.getRealPath(this.image_store_dir);
+		logger.info("image..." + path.toString());
+		File pic = new File(String.format("%s%s%s", path, File.separator, id));
 		try {
 			file.transferTo(pic);
 		} catch (IllegalStateException e) {
